@@ -12,17 +12,17 @@ contract AirdropHouses is ERC721, Ownable {
     using Strings for uint256;
 
     Counters.Counter private _tokenIdCounter;
-    uint private _saleMode = 0;             // 0 - nothing, 1 - presale 2-public sale
+    uint private _saleMode = 1;             // 0 - nothing, 1 - presale 2-public sale
     bytes32 private _root;
 
-    uint256 private presalePrice = 2 * 10 ** 16;        // 0.02 eth
-    uint256 private publicSalePrice  = 5 * 10 ** 16;    // 0.05 eth
+    uint256 private presalePrice = 15 * 10 ** 14;        // 0.0015 eth
+    uint256 private publicSalePrice  = 3 * 10 ** 15;    // 0.3 eth
 
-    uint startDate;                // 2012-12-01 10:00:00
+    uint startDate = 1651232723;                // 2012-12-01 10:00:00
 
     string private _strBaseTokenURI;
 
-    event WhitelistModeChanged(bool isWhiteList);
+    event SaleModeChanged(uint _saleMode);
     event MintNFT(address indexed _to, uint256 _number);
 
     constructor() ERC721("AirDropHouses", "PSL") {
@@ -35,14 +35,48 @@ contract AirdropHouses is ERC721, Ownable {
     }
 
     function totalCount() public pure returns (uint256) {
-        return 1000;
+        return 2000;
     }
 
+    function getCurrentTimestamp() public view returns (uint) {
+        return block.timestamp;
+    }
+
+    function getTimePast() public view returns (uint) {
+        return block.timestamp - startDate;
+    }
+
+    // in production change 6 -> 600
+    function getLeftPresale(uint timestamp) public view returns (uint256) {
+        uint limitCount;
+        // if ((block.timestamp - startDate) / 60 / 60 <= 2) {
+        if (timestamp <= startDate + 2 hours) {
+            limitCount = 6;
+        }
+        else if (timestamp <= startDate + 4 hours) {
+            limitCount = 12;
+        }
+        else if (timestamp <= startDate + 6 hours) {
+            limitCount = 18;
+        }
+        return limitCount >= (_tokenIdCounter.current() / 6 + 1) * 6 ? limitCount - _tokenIdCounter.current() : (_tokenIdCounter.current() / 6 + 1) - _tokenIdCounter.current();
+        // return limitCount - _tokenIdCounter.current();
+    }
+
+
+    // in production change 10 ** 14 => 10 ** 16
     function price() public view returns (uint256) {
-        if(_saleMode == 2) {
+        if (_saleMode == 2) {
             return publicSalePrice;
         }
-        return presalePrice;
+        if (getTimePast() / 60 / 60 < 2) {
+            console.log('before 2: ',presalePrice + 5 * 10 ** 14 * (_tokenIdCounter.current() / 6));
+            return presalePrice + 5 * 10 ** 14 * (_tokenIdCounter.current() / 6);
+        }
+        else if (getTimePast() / 60 / 60 < 4) {
+            return presalePrice + 5 * 10 ** 14 + 5 * 10 ** 14 * (_tokenIdCounter.current() / 12);
+        }
+        return presalePrice + 10 * 10 ** 14;                    // 0.0025 eth
     }
 
     function safeMint(address to, uint256 number) public onlyOwner {
@@ -91,21 +125,23 @@ contract AirdropHouses is ERC721, Ownable {
 
         emit MintNFT(recipiant, number);
     }
-
+    
     function payToWhiteMint(
         address recipiant,
-        bytes32[] memory proof,
+        //bytes32[] memory proof,
         uint256 number
     ) public payable {
         require((_saleMode == 1), "Presale is not suppoted!");
+        
+        require((block.timestamp - startDate <= 6 * 60 * 60), "You are too late, presale is finished");
 
         require(msg.value >= price() * number, "Money is not enough!");
 
-        bool isWhitelisted = verifyWhitelist(_leaf(recipiant), proof);
+        require((getLeftPresale(block.timestamp) >= number), "There aren't enough nfts for you");
 
-        require(isWhitelisted, "Not whitelisted");
+        //bool isWhitelisted = verifyWhitelist(_leaf(recipiant), proof);
 
-        //  
+    //    require(isWhitelisted, "Not whitelisted");
 
         for (uint256 i = 0; i < number; i++) {
             uint256 newItemid = _tokenIdCounter.current();
@@ -168,10 +204,10 @@ contract AirdropHouses is ERC721, Ownable {
         return _saleMode;
     }
 
-    function setWhiteListMode(uint mode) external onlyOwner {
+    function setSaleMode(uint mode) external onlyOwner {
         _saleMode = mode;
         // if (mode === )
 
-        emit WhitelistModeChanged(mode);
+        emit SaleModeChanged(mode);
     }
 }
