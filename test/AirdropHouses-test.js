@@ -1,5 +1,7 @@
 const { expect } = require('chai');
-const { ethers } = require('hardhat');
+const { ethers, getNamedAccounts } = require('hardhat');
+
+let _siner;
 
 describe('AirdropHouses NFT', function () {
   let airdropHouses;
@@ -9,9 +11,46 @@ describe('AirdropHouses NFT', function () {
     airdropHouses = await AirdropHouses.deploy();
 
     await airdropHouses.deployed();
+
+    console.log(typeof getNamedAccounts);
+
+    //    const { deployer, minter, ..._others } = await getNamedAccounts();
+    //    _signer = await ethers.getSigner(deployer);
+  });
+
+  it('admin confirm', async function () {
+    // let tx = await airdropHouses.connect(_siner).setSaleMode(1);
+    // await tx.wait();
+    // expect(await airdropHouses.saleMode()).to.equals(1);
+    // tx = await airdropHouses.connect(_siner).setSaleMode(2);
+    // await tx.wait();
+    // expect(await airdropHouses.saleMode()).to.equal(2);
+  });
+
+  // before this test, set _saleMode = 2 (presale);
+  /*
+  it('publc sale', async function () {
+    const recipient = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
+    expect(await airdropHouses.saleMode()).to.equal(2);
+
+    let tx = await airdropHouses.payToMint(recipient, 3, {
+      value: ethers.utils.parseEther('0.009'),
+    });
+    await tx.wait();
+
+    expect(await airdropHouses.count()).to.equal(3);
+
+    tx = await airdropHouses.payToMint(recipient, 2, {
+      value: ethers.utils.parseEther('0.006'),
+    });
+    await tx.wait();
+
+    expect(await airdropHouses.count()).to.equal(5);
+    expect(await airdropHouses.balanceOf(recipient)).to.equal(5);
   });
 
   // before this test, set _saleMode = 1 (presale);
+  /*
   it('initial state:', async function () {
     const recipient = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
     let balance = await airdropHouses.balanceOf(recipient);
