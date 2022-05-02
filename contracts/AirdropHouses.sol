@@ -15,14 +15,25 @@ contract AirdropHouses is ERC721, Ownable {
     uint private _saleMode = 1;             // 0 - nothing, 1 - presale 2-public sale
     mapping (uint256 => bytes32) private _merkleRoots;
 
-    uint256 private presalePrice = 15 * 10 ** 14;        // 0.0015 eth
-    uint256 private publicSalePrice  = 3 * 10 ** 15;    // 0.003 eth
+    uint256 private _presalePrice = 15 * 10 ** 17        // 1.5 eth
+    uint256 private _publicSalePrice  = 3 * 10 ** 18;    // 3 eth
+    uint256 private _risingPrice = 5 * 10 ** 17;         // 0.5 eth
 
-    uint _startDate = 1651327724;                // 2012-12-01 10:00:00
+    uint256 private _sheetsPerBatch = 600;
+    uint256 private _batchDuratioin = 2 hours;
+
+    uint256 private _publicMintLimit = 5;
+
+    uint _startDate = 1651327724;
 
     string private _strBaseTokenURI;
 
     event SaleModeChanged(uint _saleMode);
+    event RisingPriceChanged(uint _risingPrice);
+    event SheetsPerBatchChanged(uint _sheetsPerBatch);
+    event BatchDurationChanged(uint _batchDuratioin);
+    event publicMintLimitChanged(uint _publicMintLimit);
+    event StartDateChanged(uint startDate);
     event MintNFT(address indexed _to, uint256 _number);
 
     constructor() ERC721("AirDropHouses", "PSL") {
@@ -47,37 +58,34 @@ contract AirdropHouses is ERC721, Ownable {
         return block.timestamp - _startDate;
     }
 
-    // in production change 6 -> 600
-    function getLeftPresale(uint timestamp) public view returns (uint256) {
+    // get count of sheets by past time and count of sheets sold
+    function getLeftPresale() public view returns (uint256) {
         uint limitCount;
-        // if ((block.timestamp - _startDate) / 60 / 60 <= 2) {
-        if (timestamp <= _startDate + 2 hours) {
-            limitCount = 6;
+        if (getTimePast() < _batchDuratioin) {
+            limitCount = _sheetsPerBatch;
         }
-        else if (timestamp <= _startDate + 4 hours) {
-            limitCount = 12;
+        else if (getTimePast() < 2 * _batchDuratioin) {
+            limitCount = 2 * _sheetsPerBatch;
         }
-        else if (timestamp <= _startDate + 6 hours) {
-            limitCount = 18;
+        else if (getTimePast() < 3 * _batchDuratioin) {
+            limitCount = 3 * _sheetsPerBatch;
         }
-        return limitCount >= (_tokenIdCounter.current() / 6 + 1) * 6 ? limitCount - _tokenIdCounter.current() : (_tokenIdCounter.current() / 6 + 1) - _tokenIdCounter.current();
+        return limitCount >= (_tokenIdCounter.current() / _batchDuratioin + 1) * _batchDuratioin ? limitCount - _tokenIdCounter.current() : (_tokenIdCounter.current() / _batchDuratioin + 1) - _tokenIdCounter.current();
         // return limitCount - _tokenIdCounter.current();
     }
 
-
-    // in production change 10 ** 14 => 10 ** 16
     function price() public view returns (uint256) {
         if (_saleMode == 2) {
-            return publicSalePrice;
+            return _publicSalePrice;
         }
-        if (getTimePast() / 60 / 60 < 2) {
-            console.log('before 2: ',presalePrice + 5 * 10 ** 14 * (_tokenIdCounter.current() / 6));
-            return presalePrice + 5 * 10 ** 14 * (_tokenIdCounter.current() / 6);
+        if (getTimePast() < _batchDuratioin) {
+            console.log('before 2: ',_presalePrice + _risingPrice * (_tokenIdCounter.current() / _batchDuratioin));
+            return _presalePrice + _risingPrice * (_tokenIdCounter.current() / _batchDuratioin);
         }
-        else if (getTimePast() / 60 / 60 < 4) {
-            return presalePrice + 5 * 10 ** 14 + 5 * 10 ** 14 * (_tokenIdCounter.current() / 12);
+        else if (getTimePast() < 2 * _batchDuratioin) {
+            return _presalePrice + _risingPrice + _risingPrice * (_tokenIdCounter.current() / 2 /_batchDuratioin);
         }
-        return presalePrice + 10 * 10 ** 14;                    // 0.0025 eth
+        return _presalePrice + 2 * _risingPrice;    // 1.5 eth + 2 * 0.5 eth = 2.5 eth
     }
 
     function safeMint(address to, uint256 number) public onlyOwner {
@@ -117,7 +125,7 @@ contract AirdropHouses is ERC721, Ownable {
         require((_saleMode == 2), "Public mint is not started yet!");
         require(msg.value >= price() * number, "Money is not enough!");
         require((number <= totalCount() - count()), "There are less sheets left than you want!");
-        require((balanceOf(recipiant) + number <= 5), "You can NOT buy more than 5 sheets!");
+        require((balanceOf(recipiant) + number <= _publicMintLimit), "You can NOT buy more than _publicMintLimit sheets!");
         
         for (uint256 i = 0; i < number; i++) {
             uint256 newItemid = _tokenIdCounter.current();
@@ -137,13 +145,13 @@ contract AirdropHouses is ERC721, Ownable {
     ) public payable {
         require(_saleMode == 1, "Presale is not suppoted!");
 
-        require((block.timestamp - _startDate <= 6 * 60 * 60), "You are too late, presale is finished");
+        require(getTimePast() < 3 * _batchDuratioin, "You are too late, presale is finished");    // check if preSale is finished
 
         require(msg.value >= price() * number, "Money is not enough!");
 
         require(balanceOf(recipiant) + number <= limit, "Mint amount limitation!");
 
-        require((getLeftPresale(block.timestamp) >= number), "There aren't enough nfts for you!");
+        require((getLeftPresale() >= number), "There aren't enough nfts for you!");
 
         bool isWhitelisted = verifyWhitelist(_leaf(recipiant), limit, proof);
 
@@ -200,20 +208,49 @@ contract AirdropHouses is ERC721, Ownable {
 
     function setMerkleRoot(uint256 groupNum, bytes32 merkleRoot) external onlyOwner {
         _merkleRoots[groupNum] = merkleRoot;
+
+        emit MerkelRootChanged(groupNum, merkleRoot)
     }
 
     function saleMode() external view returns (uint) {
         return _saleMode;
     }
 
-    function setStartDate(uint256 launchTime) private {
-        _startDate = launchTime;
+    function setStartDate(uint256 lunchTime) private {
+        _startDate = lunchTime;
+
+        emit StartDateChanged(lunchTime);
     }
 
     function setSaleMode(uint mode) external onlyOwner {
         _saleMode = mode;
         setStartDate(block.timestamp);
+
         emit SaleModeChanged(mode);
+    }
+
+    function setRisingPrice(uint risingPrice) external onlyOwner {
+        _risingPrice = risingPrice;
+
+        emit RisingPriceChanged(risingPrice)
+    }
+
+    function setSheetsPerBatch(uint sheetsPerBatch) external onlyOwner {
+        _sheetsPerBatch = sheetsPerBatch;
+
+        emit SheetsPerBatchChanged(sheetsPerBatch);
+    }
+
+    function setTimePerBatch(uint batchDuration) external onlyOwner {
+        _batchDuratioin = batchDuration;
+
+        emit BatchDurationChanged(batchDuration);
+    }
+
+    function setPublicMintLimit(uint publicMintLimit) external onlyOwner {
+        _publicMintLimit = publicMintLimit;
+
+        emit publicMintLimitChanged(publicMintLimit);
     }
 
 }
