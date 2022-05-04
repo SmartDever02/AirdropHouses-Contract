@@ -15,7 +15,7 @@ contract AirdropHouses is ERC721, Ownable {
     uint private _saleMode = 1;             // 0 - nothing, 1 - presale 2-public sale
     mapping (uint256 => bytes32) private _merkleRoots;
 
-    uint256 private _presalePrice = 15 * 10 ** 17        // 1.5 eth
+    uint256 private _presalePrice = 15 * 10 ** 17;        // 1.5 eth
     uint256 private _publicSalePrice  = 3 * 10 ** 18;    // 3 eth
     uint256 private _risingPrice = 5 * 10 ** 17;         // 0.5 eth
 
@@ -24,10 +24,11 @@ contract AirdropHouses is ERC721, Ownable {
 
     uint256 private _publicMintLimit = 5;
 
-    uint _startDate = 1651327724;
+    uint _startDate = 1651515999;
 
     string private _strBaseTokenURI;
 
+    event MerkelRootChanged(uint256 _groupNum, bytes32 _merkleRoot);
     event SaleModeChanged(uint _saleMode);
     event RisingPriceChanged(uint _risingPrice);
     event SheetsPerBatchChanged(uint _sheetsPerBatch);
@@ -44,6 +45,12 @@ contract AirdropHouses is ERC721, Ownable {
         _merkleRoots[2] = 0xfadbd3c7f79fa2bdc4f24857709cd4a4e870623dc9e9abcdfd6e448033e35212;
         _merkleRoots[1] = 0x135ef9624875b00601c3d17487323d5831d2caacf19de1ed33f2e675597f46f0;
         _strBaseTokenURI = "https://";
+    }
+
+    // To be deleted
+
+    function getCurrentTimestamp() external view returns (uint) {
+        return block.timestamp;
     }
 
     function _baseURI() internal view override returns (string memory) {
@@ -70,8 +77,8 @@ contract AirdropHouses is ERC721, Ownable {
         else if (getTimePast() < 3 * _batchDuratioin) {
             limitCount = 3 * _sheetsPerBatch;
         }
-        return limitCount >= (_tokenIdCounter.current() / _batchDuratioin + 1) * _batchDuratioin ? limitCount - _tokenIdCounter.current() : (_tokenIdCounter.current() / _batchDuratioin + 1) - _tokenIdCounter.current();
         // return limitCount - _tokenIdCounter.current();
+        return limitCount >= (_tokenIdCounter.current() / _sheetsPerBatch + 1) * _sheetsPerBatch ? limitCount - _tokenIdCounter.current() : (_tokenIdCounter.current() / _sheetsPerBatch + 1) - _tokenIdCounter.current();
     }
 
     function price() public view returns (uint256) {
@@ -123,8 +130,11 @@ contract AirdropHouses is ERC721, Ownable {
 
     function payToMint(address recipiant, uint256 number) public payable {
         require((_saleMode == 2), "Public mint is not started yet!");
+
         require(msg.value >= price() * number, "Money is not enough!");
+
         require((number <= totalCount() - count()), "There are less sheets left than you want!");
+
         require((balanceOf(recipiant) + number <= _publicMintLimit), "You can NOT buy more than _publicMintLimit sheets!");
         
         for (uint256 i = 0; i < number; i++) {
@@ -167,16 +177,20 @@ contract AirdropHouses is ERC721, Ownable {
         emit MintNFT(recipiant, number);
     }
 
-    function count() public view returns (uint256) {
-        return _tokenIdCounter.current();
-    }
-
     function withdraw() public onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
 
+    function count() public view returns (uint256) {
+        return _tokenIdCounter.current();
+    }
+
     function _leaf(address account) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(account));
+    }
+
+    function saleMode() external view returns (uint) {
+        return _saleMode;
     }
 
     function verifyWhitelist(bytes32 leaf, uint limit, bytes32[] memory proof)
@@ -209,12 +223,9 @@ contract AirdropHouses is ERC721, Ownable {
     function setMerkleRoot(uint256 groupNum, bytes32 merkleRoot) external onlyOwner {
         _merkleRoots[groupNum] = merkleRoot;
 
-        emit MerkelRootChanged(groupNum, merkleRoot)
+        emit MerkelRootChanged(groupNum, merkleRoot);
     }
 
-    function saleMode() external view returns (uint) {
-        return _saleMode;
-    }
 
     function setStartDate(uint256 lunchTime) private {
         _startDate = lunchTime;
@@ -232,7 +243,7 @@ contract AirdropHouses is ERC721, Ownable {
     function setRisingPrice(uint risingPrice) external onlyOwner {
         _risingPrice = risingPrice;
 
-        emit RisingPriceChanged(risingPrice)
+        emit RisingPriceChanged(risingPrice);
     }
 
     function setSheetsPerBatch(uint sheetsPerBatch) external onlyOwner {

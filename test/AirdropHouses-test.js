@@ -28,29 +28,29 @@ describe('AirdropHouses NFT', function () {
   });
 
   // before this test, set _saleMode = 2 (presale);
-  /*
-  it('publc sale', async function () {
-    const recipient = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
-    expect(await airdropHouses.saleMode()).to.equal(2);
 
-    let tx = await airdropHouses.payToMint(recipient, 3, {
-      value: ethers.utils.parseEther('0.009'),
-    });
-    await tx.wait();
+  // it('publc sale', async function () {
+  //   const recipient = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
+  //   expect(await airdropHouses.saleMode()).to.equal(2);
 
-    expect(await airdropHouses.count()).to.equal(3);
+  //   let tx = await airdropHouses.payToMint(recipient, 3, {
+  //     value: ethers.utils.parseEther('9'),
+  //   });
+  //   await tx.wait();
 
-    tx = await airdropHouses.payToMint(recipient, 2, {
-      value: ethers.utils.parseEther('0.006'),
-    });
-    await tx.wait();
+  //   expect(await airdropHouses.count()).to.equal(3);
 
-    expect(await airdropHouses.count()).to.equal(5);
-    expect(await airdropHouses.balanceOf(recipient)).to.equal(5);
-  });
+  //   tx = await airdropHouses.payToMint(recipient, 2, {
+  //     value: ethers.utils.parseEther('6'),
+  //   });
+  //   await tx.wait();
+
+  //   expect(await airdropHouses.count()).to.equal(5);
+  //   expect(await airdropHouses.balanceOf(recipient)).to.equal(5);
+  // });
 
   // before this test, set _saleMode = 1 (presale);
-  /*
+
   it('initial state:', async function () {
     const recipient = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
     let balance = await airdropHouses.balanceOf(recipient);
@@ -66,12 +66,18 @@ describe('AirdropHouses NFT', function () {
     console.log(await airdropHouses.getTimePast());
     //expect(price.toString()).to.equal('1500000000000000');
     expect(await airdropHouses.count()).to.equal('0');
+
+    expect(await airdropHouses.count()).to.equal(0);
+    console.log('left sale', await airdropHouses.getLeftPresale());
+    expect(await airdropHouses.getLeftPresale()).to.equal(1200);
+    // expect(await airdropHouses.getLeftPresale()).to.equal(1);
   });
 
-  it('buy 3 nfts then 3 lefts', async function () {
+  /*
+  it('buy 300 nfts then 300 lefts', async function () {
     const recipient = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266';
     let tx = await airdropHouses.payToWhiteMint(recipient, 3, {
-      value: ethers.utils.parseEther('0.0045'),
+      value: ethers.utils.parseEther('4.5'),
     });
     await tx.wait();
 
@@ -84,7 +90,7 @@ describe('AirdropHouses NFT', function () {
     );
 
     tx = await airdropHouses.payToWhiteMint(recipient, 3, {
-      value: ethers.utils.parseEther('0.0045'),
+      value: ethers.utils.parseEther('4.5'),
     });
     await tx.wait();
 
@@ -101,12 +107,12 @@ describe('AirdropHouses NFT', function () {
     await network.provider.send('evm_increaseTime', [7200]);
     await network.provider.send('evm_mine'); // after 2 hours
     expect((await airdropHouses.price()).toString()).to.equal(
-      '2000000000000000'
+      '2000000000000000000'
     );
     await network.provider.send('evm_increaseTime', [7200]);
     await network.provider.send('evm_mine'); //after 4 hours
     expect((await airdropHouses.price()).toString()).to.equal(
-      '2500000000000000'
+      '2500000000000000000'
     );
   });
 
