@@ -24,7 +24,7 @@ contract AirdropHouses is ERC721, Ownable {
 
     uint256 private _publicMintLimit = 5;
 
-    uint _startDate = 1651515999;
+    uint _startDate = 1652226165;
 
     string private _strBaseTokenURI;
 
@@ -50,6 +50,7 @@ contract AirdropHouses is ERC721, Ownable {
     // To be deleted
 
     function getCurrentTimestamp() external view returns (uint) {
+
         return block.timestamp;
     }
 
@@ -63,6 +64,7 @@ contract AirdropHouses is ERC721, Ownable {
 
     function getTimePast() public view returns (uint) {
         return block.timestamp - _startDate;
+
     }
 
     // get count of sheets by past time and count of sheets sold
