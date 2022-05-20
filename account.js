@@ -1,6 +1,6 @@
 module.exports = {
-  address: "0x3c3d8b9A40060E82FcE0357Bf833E28141Bf5289",
+  address: '0xaa27F3889864F54565146ddaf8BFCcf8462a4907',
   privateKey:
-    "6e22bd008464f3c6a045b711fdc696d5afab7e95594ef299013a930a1a916f68",
-  url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+    '7570a8202aef260f6ba81574d4a4e1961f84113bb56fc14faa5c7fc3c5d75ff9',
+  url: 'https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
 };
