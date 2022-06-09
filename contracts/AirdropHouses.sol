@@ -44,11 +44,12 @@ contract AirdropHouses is ERC721, Ownable {
     event BaseURIChanged(string newURI);
 
     constructor() ERC721("AirDropHouses", "ADH") {
-        _merkleRoots[1][10] = 0x3c62e1c2272bb29ec01d9b34a85384600a582b0d4fcd20d7fa895baec49c022f;
-        _merkleRoots[1][7] = 0xa42a099db169617bdca79c15a8fd8dcaf94f67c947a799cc5acfb3266cbd28b4;
-        _merkleRoots[1][6] = 0x669375b053f202638988ca3128a6c82fcf9a8f26ca369041a9a09f833c1f0b99;
-        _merkleRoots[2][3] = 0x19b794284b19bd442b231eb9bbf3645b186a33f90dc34fe85a386871423f79b9;
-        _merkleRoots[3][1] = 0x8339fa2f8e50409bd4f08cdee896dc84712a5a8852839fe0d971d8c108a4308a;
+        _merkleRoots[1][10] = 0x96acecf251fdbb6eef35fde352b9afa11bdb198444de51d20aa190be3da3498f;
+        _merkleRoots[1][7] = 0xf45563d140b2f28102755980ec9e98d1fa35a83720a38bbd0616d4e3016030a4;
+        _merkleRoots[1][1] = 0x86b477c107683bf6bcb4fc7da646b68bbeb71ac92d3e509fac621e0f8179561c;
+        _merkleRoots[2][5] = 0x76871e49c2fb1d6cbcc657139c829cb7e7187b370ddddeaeb90ef60450f151e1;
+        _merkleRoots[2][6] = 0x7fe1f522b96df4e466cbe9dba168ef6be4722a57ecbb7afb85e4f251a671dc90;
+        _merkleRoots[3][7] = 0xf7e14cb1df408269baef2f9dac5873cf0df451bd989680601f5b99b97fa5de4b;
     }   
 
     function getCurrentTimestamp() external view returns (uint) {
@@ -95,7 +96,7 @@ contract AirdropHouses is ERC721, Ownable {
         uint countLevel = _tokenIdCounter.current() / 500;
         uint timeLevel = getTimePast() / _batchDuration;
         uint max = countLevel > timeLevel ? countLevel : timeLevel;
-        
+
         return _presalePrice + ( max >= 2 ? 2: max ) * _risingPrice;
     }
 
