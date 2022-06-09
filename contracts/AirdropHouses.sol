@@ -13,7 +13,7 @@ contract AirdropHouses is ERC721, Ownable {
 
     Counters.Counter private _tokenIdCounter;
     uint private _saleMode = 0;             // 0 - nothing, 1 - presale 2-public sale
-    mapping (uint256 => bytes32) private _merkleRoots;
+    mapping (uint256 => mapping(uint256 => bytes32)) private _merkleRoots;
 
     // uint256 private _presalePrice = 15 * 10 ** 17;        // 1.5 eth
     // uint256 private _publicSalePrice  = 3 * 10 ** 18;    // 3 eth
@@ -24,8 +24,8 @@ contract AirdropHouses is ERC721, Ownable {
     uint256 private _publicSalePrice  = 30;    // 30 wei
     uint256 private _risingPrice = 5;         // 5 wei
 
-    uint256 private _sheetsPerBatch = 10;       // 10 should be 500 ?
-    uint256 private _batchDuratioin = 2 hours;       
+    uint256 private _sheetsPerBatch = 10;       // 10 should be 500
+    uint256 private _batchDuration = 2 hours;       
 
     uint256 private _publicMintLimit = 5;       
 
@@ -37,18 +37,18 @@ contract AirdropHouses is ERC721, Ownable {
     event SaleModeChanged(uint _saleMode);
     event RisingPriceChanged(uint _risingPrice);
     event SheetsPerBatchChanged(uint _sheetsPerBatch);
-    event BatchDurationChanged(uint _batchDuratioin);
+    event BatchDurationChanged(uint _batchDuration);
     event publicMintLimitChanged(uint _publicMintLimit);
     event StartDateChanged(uint startDate);
     event MintNFT(address indexed _to, uint256 _number);
     event BaseURIChanged(string newURI);
 
     constructor() ERC721("AirDropHouses", "ADH") {
-        _merkleRoots[10] = 0x3c62e1c2272bb29ec01d9b34a85384600a582b0d4fcd20d7fa895baec49c022f;
-        _merkleRoots[7] = 0xa42a099db169617bdca79c15a8fd8dcaf94f67c947a799cc5acfb3266cbd28b4;
-        _merkleRoots[6] = 0x669375b053f202638988ca3128a6c82fcf9a8f26ca369041a9a09f833c1f0b99;
-        _merkleRoots[3] = 0x19b794284b19bd442b231eb9bbf3645b186a33f90dc34fe85a386871423f79b9;
-        _merkleRoots[1] = 0x8339fa2f8e50409bd4f08cdee896dc84712a5a8852839fe0d971d8c108a4308a;
+        _merkleRoots[1][10] = 0x3c62e1c2272bb29ec01d9b34a85384600a582b0d4fcd20d7fa895baec49c022f;
+        _merkleRoots[1][7] = 0xa42a099db169617bdca79c15a8fd8dcaf94f67c947a799cc5acfb3266cbd28b4;
+        _merkleRoots[1][6] = 0x669375b053f202638988ca3128a6c82fcf9a8f26ca369041a9a09f833c1f0b99;
+        _merkleRoots[2][3] = 0x19b794284b19bd442b231eb9bbf3645b186a33f90dc34fe85a386871423f79b9;
+        _merkleRoots[3][1] = 0x8339fa2f8e50409bd4f08cdee896dc84712a5a8852839fe0d971d8c108a4308a;
     }   
 
     function getCurrentTimestamp() external view returns (uint) {
@@ -70,29 +70,33 @@ contract AirdropHouses is ERC721, Ownable {
     // get count of sheets by past time and count of sheets that are sold out
     function getLeftPresale() public view returns (uint256) {
         uint limitCount;
-        if (getTimePast() < _batchDuratioin) {
+        if (getTimePast() < _batchDuration) {
             limitCount = _sheetsPerBatch;
         }
-        else if (getTimePast() < 2 * _batchDuratioin) {
+        else if (getTimePast() < 2 * _batchDuration) {
             limitCount = 2 * _sheetsPerBatch;
         }
-        else if (getTimePast() < 3 * _batchDuratioin) {
+        else if (getTimePast() < 3 * _batchDuration) {
             limitCount = 3 * _sheetsPerBatch;
         }
         return limitCount >= (_tokenIdCounter.current() / _sheetsPerBatch + 1) * _sheetsPerBatch ? limitCount - _tokenIdCounter.current() : (_tokenIdCounter.current() / _sheetsPerBatch + 1) - _tokenIdCounter.current();
+    }
+
+    function getBatchNum() public view returns (uint256) {
+        uint pastTime = getTimePast();
+        return pastTime / _batchDuration >= 3 ? 3 : pastTime / _batchDuration + 1;
     }
 
     function price() public view returns (uint256) {
         if (_saleMode == 2) {
             return _publicSalePrice;
         }
-        if (getTimePast() < _batchDuratioin) {
-            return _presalePrice + _risingPrice * (_tokenIdCounter.current() / _sheetsPerBatch);
-        }
-        else if (getTimePast() < 2 * _batchDuratioin) {
-            return _presalePrice + _risingPrice + _risingPrice * (_tokenIdCounter.current() / 2 /_sheetsPerBatch);
-        }
-        return _presalePrice + 2 * _risingPrice;    // 1.5 eth + 2 * 0.5 eth = 2.5 eth
+
+        uint countLevel = _tokenIdCounter.current() / 500;
+        uint timeLevel = getTimePast() / _batchDuration;
+        uint max = countLevel > timeLevel ? countLevel : timeLevel;
+        
+        return _presalePrice + ( max >= 2 ? 2: max ) * _risingPrice;
     }
 
     function safeMint(address to, uint256 number) public onlyOwner {
@@ -156,7 +160,7 @@ contract AirdropHouses is ERC721, Ownable {
 
         require(_saleMode == 1, "Presale is not suppoted!");
 
-        require(getTimePast() < 3 * _batchDuratioin, "You are too late, presale is finished");    // check if preSale is finished
+        require(getTimePast() < 3 * _batchDuration, "You are too late, presale is finished");    // check if preSale is finished
 
         require(msg.value >= price() * number, "Money is not enough!");
 
@@ -164,7 +168,7 @@ contract AirdropHouses is ERC721, Ownable {
 
         require((getLeftPresale() >= number), "There aren't enough nfts for you in this batch!");
 
-        bool isWhitelisted = verifyWhitelist(_leaf(recipiant), limit, proof);
+        bool isWhitelisted = verifyWhitelist(getBatchNum(), _leaf(recipiant), limit, proof);
 
         require(isWhitelisted, "Sorry, You are not a whitelist member.");
 
@@ -194,7 +198,7 @@ contract AirdropHouses is ERC721, Ownable {
         return _saleMode;
     }
 
-    function verifyWhitelist(bytes32 leaf, uint limit, bytes32[] memory proof)
+    function verifyWhitelist(uint256 batchNum, bytes32 leaf, uint limit, bytes32[] memory proof)
         public
         view
         returns (bool)
@@ -218,11 +222,17 @@ contract AirdropHouses is ERC721, Ownable {
         }
 
         // Check if the computed hash (root) is equal to the provided root
-        return computedHash == _merkleRoots[limit];
+        for(uint i = 1; i <= batchNum; i++) {
+            if(_merkleRoots[i][limit] == computedHash) {
+                return true;
+            }
+        }
+        return false;
+        // return computedHash == _merkleRoots[batchNum][limit] ;
     }
 
-    function setMerkleRoot(uint256 groupNum, bytes32 merkleRoot) external onlyOwner {
-        _merkleRoots[groupNum] = merkleRoot;
+    function setMerkleRoot(uint256 batchNum, uint256 groupNum, bytes32 merkleRoot) external onlyOwner {
+        _merkleRoots[batchNum][groupNum] = merkleRoot;
 
         emit MerkelRootChanged(groupNum, merkleRoot);
     }
@@ -254,7 +264,7 @@ contract AirdropHouses is ERC721, Ownable {
     }
 
     function setTimePerBatch(uint batchDuration) external onlyOwner {
-        _batchDuratioin = batchDuration;
+        _batchDuration = batchDuration;
 
         emit BatchDurationChanged(batchDuration);
     }
