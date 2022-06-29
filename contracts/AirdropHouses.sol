@@ -70,30 +70,24 @@ contract AirdropHouses is ERC721, Ownable {
 
     // get count of sheets by past time and count of sheets that are sold out
     function getLeftPresale() public view returns (uint256) {
-        uint limitCount;
-        if (getTimePast() < _batchDuration) {
-            limitCount = _sheetsPerBatch;
-        }
-        else if (getTimePast() < 2 * _batchDuration) {
-            limitCount = 2 * _sheetsPerBatch;
-        }
-        else if (getTimePast() < 3 * _batchDuration) {
-            limitCount = 3 * _sheetsPerBatch;
-        }
-        return limitCount >= (_tokenIdCounter.current() / _sheetsPerBatch + 1) * _sheetsPerBatch ? limitCount - _tokenIdCounter.current() : (_tokenIdCounter.current() / _sheetsPerBatch + 1) - _tokenIdCounter.current();
+        return _tokenIdCounter.current() >= _sheetsPerBatch * 3 ? 0 : _sheetsPerBatch - (_tokenIdCounter.current() % _sheetsPerBatch);
     }
 
     function getBatchNum() public view returns (uint256) {
-        uint pastTime = getTimePast();
-        return pastTime / _batchDuration >= 3 ? 3 : pastTime / _batchDuration + 1;
+        uint batch  = getTimePast() / _batchDuration + 1;
+
+        return batch >= 3 ? 3 : batch;
     }
 
     function price() public view returns (uint256) {
+        if (_saleMode == 0) {
+            return _presalePrice;
+        }
         if (_saleMode == 2) {
             return _publicSalePrice;
         }
 
-        uint countLevel = _tokenIdCounter.current() / 500;
+        uint countLevel = _tokenIdCounter.current() / _sheetsPerBatch;
         uint timeLevel = getTimePast() / _batchDuration;
         uint max = countLevel > timeLevel ? countLevel : timeLevel;
 
@@ -129,7 +123,7 @@ contract AirdropHouses is ERC721, Ownable {
         string memory baseURI = _baseURI();
         return
             bytes(baseURI).length > 0
-                ? string(abi.encodePacked(baseURI, tokenId.toString(), ".json"))
+                ? string(abi.encodePacked(baseURI, (tokenId + 1).toString(), ".json"))
                 : "";
     }
 
@@ -161,7 +155,7 @@ contract AirdropHouses is ERC721, Ownable {
 
         require(_saleMode == 1, "Presale is not suppoted!");
 
-        require(getTimePast() < 3 * _batchDuration, "You are too late, presale is finished");    // check if preSale is finished
+        require(getTimePast() < 9 * _batchDuration, "You are too late, presale is finished");    // check if preSale is finished
 
         require(msg.value >= price() * number, "Money is not enough!");
 
@@ -237,7 +231,6 @@ contract AirdropHouses is ERC721, Ownable {
 
         emit MerkelRootChanged(groupNum, merkleRoot);
     }
-
 
     function setStartDate(uint256 lunchTime) private {
         _startDate = lunchTime;
