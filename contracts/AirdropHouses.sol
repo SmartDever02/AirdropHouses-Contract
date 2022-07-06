@@ -23,9 +23,10 @@ contract AirdropHouses is ERC721, Ownable {
     uint256 private _presalePrice = 15;        // 15 wei
     uint256 private _publicSalePrice  = 30;    // 30 wei
     uint256 private _risingPrice = 5;         // 5 wei
+    uint256 private _priceLastChangeTime;           // price last change time
 
-    uint256 private _sheetsPerBatch = 10;       // 10 should be 500
-    uint256 private _batchDuration = 2 hours;       
+    uint256 private _sheetsPerPrice = 10;       // 10 should be 500
+    uint256 private _batchDuration = 1 hours;       
 
     uint256 private _publicMintLimit = 5;       
 
@@ -36,7 +37,7 @@ contract AirdropHouses is ERC721, Ownable {
     event MerkelRootChanged(uint256 _groupNum, bytes32 _merkleRoot);
     event SaleModeChanged(uint _saleMode);
     event RisingPriceChanged(uint _risingPrice);
-    event SheetsPerBatchChanged(uint _sheetsPerBatch);
+    event SheetsPerPriceChanged(uint _sheetsPerPrice);
     event BatchDurationChanged(uint _batchDuration);
     event publicMintLimitChanged(uint _publicMintLimit);
     event StartDateChanged(uint startDate);
@@ -70,7 +71,9 @@ contract AirdropHouses is ERC721, Ownable {
 
     // get count of sheets by past time and count of sheets that are sold out
     function getLeftPresale() public view returns (uint256) {
-        return _tokenIdCounter.current() >= _sheetsPerBatch * 3 ? 0 : _sheetsPerBatch - (_tokenIdCounter.current() % _sheetsPerBatch);
+        if(_tokenIdCounter.current() >= _sheetsPerPrice * 3) return 0;
+        uint batchNum = getBatchNum();
+        return _sheetsPerPrice * batchNum - (_tokenIdCounter.current() % _sheetsPerPrice);
     }
 
     function getBatchNum() public view returns (uint256) {
@@ -87,8 +90,8 @@ contract AirdropHouses is ERC721, Ownable {
             return _publicSalePrice;
         }
 
-        uint countLevel = _tokenIdCounter.current() / _sheetsPerBatch;
-        uint timeLevel = getTimePast() / _batchDuration;
+        uint countLevel = _tokenIdCounter.current() / _sheetsPerPrice;
+        uint timeLevel = getTimePast() / _batchDuration / 3;
         uint max = countLevel > timeLevel ? countLevel : timeLevel;
 
         return _presalePrice + ( max >= 2 ? 2: max ) * _risingPrice;
@@ -155,7 +158,9 @@ contract AirdropHouses is ERC721, Ownable {
 
         require(_saleMode == 1, "Presale is not suppoted!");
 
-        require(getTimePast() < 9 * _batchDuration, "You are too late, presale is finished");    // check if preSale is finished
+        require(_tokenIdCounter.current() < _sheetsPerPrice * 3, "Too late, all presale NFTs are sold out");
+
+        require(getTimePast() < 10 * _batchDuration , "You are too late, presale is finished");    // check if preSale is finished
 
         require(msg.value >= price() * number, "Money is not enough!");
 
@@ -166,6 +171,10 @@ contract AirdropHouses is ERC721, Ownable {
         bool isWhitelisted = verifyWhitelist(getBatchNum(), _leaf(recipiant), limit, proof);
 
         require(isWhitelisted, "Sorry, You are not a whitelist member.");
+        
+        if(getLeftPresale() == number) {
+            setLastPriceChangeTime(block.timestamp);
+        }
 
         for (uint256 i = 0; i < number; i++) {
             uint256 newItemid = _tokenIdCounter.current();
@@ -191,6 +200,18 @@ contract AirdropHouses is ERC721, Ownable {
 
     function saleMode() external view returns (uint) {
         return _saleMode;
+    }
+
+    function sheetsPerPrice() external view returns (uint) {
+        return _sheetsPerPrice;
+    }
+
+    function batchDuration() external view returns (uint) {
+        return _batchDuration;
+    }
+
+    function fromLastPriceTimeToNow() external view returns (uint) {
+        return block.timestamp - _priceLastChangeTime;
     }
 
     function verifyWhitelist(uint256 batchNum, bytes32 leaf, uint limit, bytes32[] memory proof)
@@ -238,10 +259,16 @@ contract AirdropHouses is ERC721, Ownable {
         emit StartDateChanged(lunchTime);
     }
 
+    function setLastPriceChangeTime(uint lastTime) private {
+        _priceLastChangeTime = lastTime;
+    }
+
     function setSaleMode(uint mode) external onlyOwner {
         _saleMode = mode;
-        setStartDate(block.timestamp);
-
+        if (mode == 1) {
+            setStartDate(block.timestamp);
+            setLastPriceChangeTime(block.timestamp);
+        }
         emit SaleModeChanged(mode);
     }
 
@@ -251,16 +278,16 @@ contract AirdropHouses is ERC721, Ownable {
         emit RisingPriceChanged(risingPrice);
     }
 
-    function setSheetsPerBatch(uint sheetsPerBatch) external onlyOwner {
-        _sheetsPerBatch = sheetsPerBatch;
+    function setSheetsPerPrice(uint sheets) external onlyOwner {
+        _sheetsPerPrice = sheets;
 
-        emit SheetsPerBatchChanged(sheetsPerBatch);
+        emit SheetsPerPriceChanged(sheets);
     }
 
-    function setTimePerBatch(uint batchDuration) external onlyOwner {
-        _batchDuration = batchDuration;
+    function setTimePerBatch(uint duration) external onlyOwner {
+        _batchDuration = duration;
 
-        emit BatchDurationChanged(batchDuration);
+        emit BatchDurationChanged(duration);
     }
 
     function setPublicMintLimit(uint publicMintLimit) external onlyOwner {
